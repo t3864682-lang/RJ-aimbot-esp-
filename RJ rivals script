@@ -1,0 +1,287 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+    Name = "Rivals ESP & Aimbot",
+    LoadingTitle = "Rivals Script",
+    LoadingSubtitle = "Made by RJ",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = "RivalsScript"
+    },
+    Discord = {
+        Enabled = true,
+        Invite = "mUC6bszA",
+        RememberJoins = true
+    },
+    KeySystem = false
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local ESPEnabled = false
+local AimbotEnabled = false
+local RapidFireEnabled = false
+local TeamCheckEnabled = true -- New variable for team check
+local AimbotKey = Enum.UserInputType.MouseButton2
+local Highlights = {}
+local FOVRadius = 150
+local RapidFireDelay = 0.05
+local AimbotSmoothness = 0.2
+local FOVCircle = Drawing.new("Circle")
+
+FOVCircle.Visible = false
+FOVCircle.Thickness = 2
+FOVCircle.Color = Color3.fromRGB(0, 255, 0)
+FOVCircle.Filled = false
+FOVCircle.Radius = FOVRadius
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+-- Function to check if a player is on the same team
+local function isSameTeam(player)
+    if not TeamCheckEnabled then
+        return false -- If team check is disabled, treat all players as valid targets
+    end
+    if player == LocalPlayer then
+        return true
+    end
+    return player.Team == LocalPlayer.Team
+end
+
+-- Function to create ESP highlight
+local function createHighlight(player)
+    if player ~= LocalPlayer and not isSameTeam(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = player.Character
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = player.Character
+        Highlights[player] = highlight
+    end
+end
+
+-- Function to remove ESP highlight
+local function removeHighlight(player)
+    if Highlights[player] then
+        Highlights[player]:Destroy()
+        Highlights[player] = nil
+    end
+end
+
+-- Update ESP for all players
+local function updateESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if ESPEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and not isSameTeam(player) then
+            if not Highlights[player] then
+                createHighlight(player)
+            end
+        else
+            removeHighlight(player)
+        end
+    end
+end
+
+-- Function to get the closest player within FOV
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if not isSameTeam(player) and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local position, onScreen = Camera:WorldToViewportPoint(head.Position)
+            if onScreen then
+                local distance = (center - Vector2.new(position.X, position.Y)).Magnitude
+                if distance < closestDistance and distance <= FOVRadius then
+                    closestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- Smooth aimbot function
+local function aimAtPlayer()
+    if AimbotEnabled then
+        local closestPlayer = getClosestPlayer()
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+            local headPosition = closestPlayer.Character.Head.Position
+            local currentCFrame = Camera.CFrame
+            local targetCFrame = CFrame.new(currentCFrame.Position, headPosition)
+            Camera.CFrame = currentCFrame:Lerp(targetCFrame, AimbotSmoothness)
+        end
+    end
+end
+
+-- Rapid fire coroutine
+local function rapidFire()
+    if RapidFireEnabled then
+        local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        if tool and tool:IsA("Tool") then
+            tool:Activate()
+            task.wait(RapidFireDelay)
+        end
+    end
+end
+
+-- Handle player added
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if ESPEnabled then
+            createHighlight(player)
+        end
+    end)
+end)
+
+-- Handle player removed
+Players.PlayerRemoving:Connect(function(player)
+    removeHighlight(player)
+end)
+
+-- Aimbot input handling
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == AimbotKey then
+        AimbotEnabled = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == AimbotKey then
+        AimbotEnabled = false
+    end
+end)
+
+-- Main loop using RenderStepped
+RunService.RenderStepped:Connect(function()
+    if ESPEnabled then
+        updateESP()
+    end
+    if AimbotEnabled then
+        aimAtPlayer()
+    end
+end)
+
+-- Rapid fire coroutine
+coroutine.wrap(function()
+    while true do
+        if RapidFireEnabled then
+            rapidFire()
+        else
+            task.wait(0.1)
+        end
+    end
+end)()
+
+-- GUI setup
+local MainTab = Window:CreateTab("Main", nil)
+local MainSection = MainTab:CreateSection("Features")
+
+MainTab:CreateToggle({
+    Name = "Enable ESP",
+    CurrentValue = false,
+    Callback = function(Value)
+        ESPEnabled = Value
+        if not Value then
+            for _, player in pairs(Players:GetPlayers()) do
+                removeHighlight(player)
+            end
+        end
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Enable Aimbot (Right Click)",
+    CurrentValue = false,
+    Callback = function(Value)
+        AimbotEnabled = Value
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Show FOV Circle",
+    CurrentValue = false,
+    Callback = function(Value)
+        FOVCircle.Visible = Value
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "FOV Radius",
+    Range = {50, 500},
+    Increment = 10,
+    CurrentValue = 150,
+    Callback = function(Value)
+        FOVRadius = Value
+        FOVCircle.Radius = Value
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Enable Rapid Fire",
+    CurrentValue = false,
+    Callback = function(Value)
+        RapidFireEnabled = Value
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "Rapid Fire Delay (s)",
+    Range = {0.01, 0.5},
+    Increment = 0.01,
+    CurrentValue = 0.05,
+    Callback = function(Value)
+        RapidFireDelay = Value
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "Aimbot Smoothness",
+    Range = {0.1, 1},
+    Increment = 0.1,
+    CurrentValue = 0.2,
+    Callback = function(Value)
+        AimbotSmoothness = Value
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Enable Team Check",
+    CurrentValue = true,
+    Callback = function(Value)
+        TeamCheckEnabled = Value
+        -- Update ESP highlights when team check is toggled
+        for _, player in pairs(Players:GetPlayers()) do
+            removeHighlight(player)
+        end
+        if ESPEnabled then
+            updateESP()
+        end
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Join Discord",
+    Callback = function()
+        Rayfield:Notify({
+            Title = "Join Our Discord",
+            Content = "Click to copy the invite link: https://discord.gg/mUC6bszA",
+            Duration = 10,
+            Image = nil
+        })
+    end
+})
+
+Rayfield:Notify({
+    Title = "Script Loaded",
+    Content = "ESP, Aimbot with FOV, Rapid Fire, and Team Check loaded. Toggle features in the GUI.",
+    Duration = 5,
+    Image = nil
+})
