@@ -1,0 +1,643 @@
+--[[
+RJ Aimbot & ESP v2
+- Key System Integrated
+- Fluent UI Hub
+- Purple Glow + Circle Minimize
+- Smooth Aim + Better ESP Defaults
+- Simple Auto-Update Guard
+]]
+
+--// AUTO-UPDATE GUARD
+local VERSION = "2.0.0"
+if _G.RJ_AIMBOT_LOADED and _G.RJ_AIMBOT_VERSION and _G.RJ_AIMBOT_VERSION >= VERSION then
+return
+end
+_G.RJ_AIMBOT_LOADED = true
+_G.RJ_AIMBOT_VERSION = VERSION
+
+--// SERVICES
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
+
+--// CONFIG: KEY SYSTEM
+local VALID_KEYS = {
+"RJ-12345",
+"RJ-TESTKEY",
+"MY-SECRET-KEY"
+}
+
+local KEY_GUI_NAME = "RJ_KeySystemGUI"
+local HUB_NAME = "RJ_Aimbot_ESP_Hub"
+
+local DISCORD_LINK = "https://discord.gg/your-server-here"
+
+local function isValidKey(input)
+for _, key in ipairs(VALID_KEYS) do
+if input == key then
+return true
+end
+end
+return false
+end
+
+--// OPTIONAL: BLUR WHILE LOCKED
+local blur = Instance.new("BlurEffect")
+blur.Size = 12
+blur.Parent = Lighting
+
+--// KEY SYSTEM GUI
+if PlayerGui:FindFirstChild(KEY_GUI_NAME) then
+PlayerGui[KEY_GUI_NAME]:Destroy()
+end
+
+local keyScreenGui = Instance.new("ScreenGui")
+keyScreenGui.Name = KEY_GUI_NAME
+keyScreenGui.ResetOnSpawn = false
+keyScreenGui.IgnoreGuiInset = true
+keyScreenGui.Parent = PlayerGui
+
+local keyFrame = Instance.new("Frame")
+keyFrame.Size = UDim2.new(0, 380, 0, 220)
+keyFrame.Position = UDim2.new(0.5, -190, 0.5, -110)
+keyFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 25)
+keyFrame.BorderSizePixel = 0
+keyFrame.BackgroundTransparency = 1
+keyFrame.Parent = keyScreenGui
+
+local keyCorner = Instance.new("UICorner")
+keyCorner.CornerRadius = UDim.new(0, 12)
+keyCorner.Parent = keyFrame
+
+local keyStroke = Instance.new("UIStroke")
+keyStroke.Color = Color3.fromRGB(140, 60, 255)
+keyStroke.Thickness = 1.5
+keyStroke.Transparency = 0.4
+keyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+keyStroke.Parent = keyFrame
+
+local keyTitle = Instance.new("TextLabel")
+keyTitle.Size = UDim2.new(1, -20, 0, 40)
+keyTitle.Position = UDim2.new(0, 10, 0, 10)
+keyTitle.BackgroundTransparency = 1
+keyTitle.Text = "RJ Scripts | Key System"
+keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyTitle.Font = Enum.Font.GothamBold
+keyTitle.TextSize = 20
+keyTitle.TextXAlignment = Enum.TextXAlignment.Left
+keyTitle.Parent = keyFrame
+
+local keySubtitle = Instance.new("TextLabel")
+keySubtitle.Size = UDim2.new(1, -20, 0, 20)
+keySubtitle.Position = UDim2.new(0, 10, 0, 45)
+keySubtitle.BackgroundTransparency = 1
+keySubtitle.Text = "Enter your key to unlock RJ Aimbot & ESP"
+keySubtitle.TextColor3 = Color3.fromRGB(180, 180, 200)
+keySubtitle.Font = Enum.Font.Gotham
+keySubtitle.TextSize = 14
+keySubtitle.TextXAlignment = Enum.TextXAlignment.Left
+keySubtitle.Parent = keyFrame
+
+local keyBox = Instance.new("TextBox")
+keyBox.Size = UDim2.new(1, -40, 0, 40)
+keyBox.Position = UDim2.new(0, 20, 0, 80)
+keyBox.BackgroundColor3 = Color3.fromRGB(25, 20, 40)
+keyBox.BorderSizePixel = 0
+keyBox.PlaceholderText = "Enter your key here..."
+keyBox.Text = ""
+keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyBox.Font = Enum.Font.Gotham
+keyBox.TextSize = 16
+keyBox.ClearTextOnFocus = false
+keyBox.Parent = keyFrame
+
+local keyBoxCorner = Instance.new("UICorner")
+keyBoxCorner.CornerRadius = UDim.new(0, 8)
+keyBoxCorner.Parent = keyBox
+
+local keyStatus = Instance.new("TextLabel")
+keyStatus.Size = UDim2.new(1, -40, 0, 20)
+keyStatus.Position = UDim2.new(0, 20, 0, 125)
+keyStatus.BackgroundTransparency = 1
+keyStatus.Text = ""
+keyStatus.TextColor3 = Color3.fromRGB(200, 60, 60)
+keyStatus.Font = Enum.Font.Gotham
+keyStatus.TextSize = 14
+keyStatus.TextXAlignment = Enum.TextXAlignment.Left
+keyStatus.Parent = keyFrame
+
+local unlockButton = Instance.new("TextButton")
+unlockButton.Size = UDim2.new(0, 150, 0, 40)
+unlockButton.Position = UDim2.new(0, 20, 0, 155)
+unlockButton.BackgroundColor3 = Color3.fromRGB(140, 60, 255)
+unlockButton.BorderSizePixel = 0
+unlockButton.Text = "Unlock"
+unlockButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+unlockButton.Font = Enum.Font.GothamBold
+unlockButton.TextSize = 16
+unlockButton.Parent = keyFrame
+
+local unlockCorner = Instance.new("UICorner")
+unlockCorner.CornerRadius = UDim.new(0, 8)
+unlockCorner.Parent = unlockButton
+
+local getKeyButton = Instance.new("TextButton")
+getKeyButton.Size = UDim2.new(0, 150, 0, 40)
+getKeyButton.Position = UDim2.new(1, -170, 0, 155)
+getKeyButton.BackgroundColor3 = Color3.fromRGB(35, 30, 55)
+getKeyButton.BorderSizePixel = 0
+getKeyButton.Text = "Get Key (Discord)"
+getKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+getKeyButton.Font = Enum.Font.Gotham
+getKeyButton.TextSize = 14
+getKeyButton.Parent = keyFrame
+
+local getKeyCorner = Instance.new("UICorner")
+getKeyCorner.CornerRadius = UDim.new(0, 8)
+getKeyCorner.Parent = getKeyButton
+
+-- Glow tween
+task.spawn(function()
+while keyFrame.Parent do
+TweenService:Create(keyStroke, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+Thickness = 2.5,
+Transparency = 0.1
+}):Play()
+task.wait(1.2)
+TweenService:Create(keyStroke, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+Thickness = 1.5,
+Transparency = 0.4
+}):Play()
+task.wait(1.2)
+end
+end)
+
+-- Fade-in animation
+keyFrame.BackgroundTransparency = 1
+for _, obj in ipairs(keyFrame:GetDescendants()) do
+if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+obj.TextTransparency = 1
+end
+end
+
+TweenService:Create(keyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+BackgroundTransparency = 0
+}):Play()
+
+for _, obj in ipairs(keyFrame:GetDescendants()) do
+if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+TweenService:Create(obj, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+TextTransparency = 0
+}):Play()
+end
+end
+
+--// MAIN HUB LOADER
+local function loadHub()
+if PlayerGui:FindFirstChild(HUB_NAME) then
+PlayerGui[HUB_NAME]:Destroy()
+end
+
+-- Remove key UI + blur with smooth fade
+TweenService:Create(keyFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+BackgroundTransparency = 1
+}):Play()
+for _, obj in ipairs(keyFrame:GetDescendants()) do
+if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+TweenService:Create(obj, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+TextTransparency = 1
+}):Play()
+end
+end
+task.delay(0.35, function()
+if blur then blur:Destroy() end
+if keyScreenGui then keyScreenGui:Destroy() end
+end)
+
+--// LOAD LIBRARIES
+local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/WetCheezit/ESPLibrary/main/Source.lua"))()
+
+--// WINDOW
+local Window = Library:CreateWindow({
+Title = "RJ Aimbot & ESP v2",
+SubTitle = "by RJ",
+TabWidth = 160,
+Size = UDim2.fromOffset(580, 460),
+Acrylic = false,
+Theme = "Darker",
+AccentColor = Color3.fromRGB(140, 60, 255),
+MinimizeKey = Enum.KeyCode.B
+})
+
+local Tabs = {
+Main = Window:AddTab({ Title = "Welcome", Icon = "home" }),
+AimAssist = Window:AddTab({ Title = "Aim Assist", Icon = "crosshair" }),
+ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
+Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
+}
+
+local playerName = LocalPlayer.Name
+
+Tabs.Main:AddParagraph({
+Title = "Welcome, " .. playerName .. "!",
+Content = "RJ Aimbot & ESP v2 is now unlocked.\nVersion: " .. VERSION
+})
+
+Tabs.Main:AddParagraph({
+Title = "Controls",
+Content = "LeftControl = Minimize\nCapsLock = Toggle Aim Assist"
+})
+
+--// ESP DEFAULTS
+ESP.settings.enabled = false
+ESP.settings.teamcheck = false
+ESP.settings.boxes = true
+ESP.settings.names = true
+ESP.settings.healthbars = true
+ESP.settings.distance = true
+
+local espEnabled = false
+
+Tabs.ESP:AddToggle("ESPGlobal", {
+Title = "ESP Global",
+Description = "Enable/Disable ESP for all players",
+Default = false,
+Callback = function(value)
+espEnabled = value
+ESP.settings.enabled = value
+end
+})
+
+Tabs.ESP:AddToggle("ESPBoxes", {
+Title = "Box ESP",
+Description = "Boxes around players",
+Default = true,
+Callback = function(value)
+ESP.settings.boxes = value
+end
+})
+
+Tabs.ESP:AddToggle("ESPHealthBar", {
+Title = "Health Bar",
+Description = "Health bars for players",
+Default = true,
+Callback = function(value)
+ESP.settings.healthbars = value
+end
+})
+
+Tabs.ESP:AddToggle("ESPNames", {
+Title = "Player Names",
+Description = "Names on players",
+Default = true,
+Callback = function(value)
+ESP.settings.names = value
+end
+})
+
+Tabs.ESP:AddToggle("ESPDistance", {
+Title = "Distance",
+Description = "Distance display for players",
+Default = true,
+Callback = function(value)
+ESP.settings.distance = value
+end
+})
+
+Tabs.ESP:AddToggle("ESPTeamCheck", {
+Title = "Team Check",
+Description = "Ignore teammates in ESP",
+Default = false,
+Callback = function(value)
+ESP.settings.teamcheck = value
+end
+})
+
+ESP:Init()
+
+--// AIM ASSIST
+local aimAssistEnabled = false
+local teamCheckEnabled = false
+local visibleCheckEnabled = true
+local aimPriority = "Player" -- "Player" or "Crosshair"
+local maxDistance = 600
+local smoothness = 0.18 -- lower = snappier, higher = smoother
+
+-- CapsLock toggle
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+if gameProcessed then return end
+if input.KeyCode == Enum.KeyCode.CapsLock then
+aimAssistEnabled = not aimAssistEnabled
+Library:Notify({
+Title = "🎯 Aim Assist",
+Content = aimAssistEnabled and "Activated! Aim will lock onto targets." or "Deactivated! Aim Assist is off.",
+Duration = 2
+})
+end
+end)
+
+local function isPlayerVisible(head)
+local origin = Camera.CFrame.Position
+local destination = head.Position
+local direction = (destination - origin)
+
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+raycastParams.FilterDescendantsInstances = { LocalPlayer.Character }
+raycastParams.IgnoreWater = true
+
+local result = workspace:Raycast(origin, direction, raycastParams)
+return result == nil or result.Instance:IsDescendantOf(head.Parent)
+end
+
+local function getScreenDistance(worldPosition)
+local screenPosition, onScreen = Camera:WorldToViewportPoint(worldPosition)
+if onScreen then
+local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+return (Vector2.new(screenPosition.X, screenPosition.Y) - screenCenter).Magnitude
+end
+return math.huge
+end
+
+local function getClosestTarget()
+local closestHead = nil
+local shortestMetric = math.huge
+
+for _, otherPlayer in ipairs(Players:GetPlayers()) do
+if otherPlayer ~= LocalPlayer and otherPlayer.Character then
+local char = otherPlayer.Character
+local head = char:FindFirstChild("Head")
+local hrp = char:FindFirstChild("HumanoidRootPart")
+
+if head and hrp then
+if teamCheckEnabled and LocalPlayer.Team ~= nil and otherPlayer.Team == LocalPlayer.Team then
+continue
+end
+
+local worldDistance = (LocalPlayer.Character.HumanoidRootPart.Position - head.Position).Magnitude
+if worldDistance > maxDistance then
+continue
+end
+
+local metric
+if aimPriority == "Player" then
+metric = worldDistance
+else
+metric = getScreenDistance(head.Position)
+end
+
+if metric < shortestMetric then
+local visible = not visibleCheckEnabled or isPlayerVisible(head)
+if visible then
+shortestMetric = metric
+closestHead = head
+end
+end
+end
+end
+end
+
+return closestHead
+end
+
+-- Smooth aim
+RunService.RenderStepped:Connect(function()
+if aimAssistEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+local targetHead = getClosestTarget()
+if targetHead then
+local currentCFrame = Camera.CFrame
+local targetCFrame = CFrame.new(currentCFrame.Position, targetHead.Position)
+Camera.CFrame = currentCFrame:Lerp(targetCFrame, smoothness)
+end
+end
+end)
+
+Tabs.AimAssist:AddToggle("AimAssistToggle", {
+Title = "Aim Assist",
+Description = "Enables or disables Aim Assist",
+Default = false,
+Callback = function(value)
+aimAssistEnabled = value
+end
+})
+
+Tabs.AimAssist:AddSlider("AimAssistRange", {
+Title = "Maximum Distance",
+Description = "Max distance for Aim Assist",
+Default = maxDistance,
+Min = 50,
+Max = 1000,
+Rounding = 0,
+Callback = function(value)
+maxDistance = value
+end
+})
+
+Tabs.AimAssist:AddSlider("AimSmoothness", {
+Title = "Aim Smoothness",
+Description = "Higher = smoother, lower = snappier",
+Default = math.floor(smoothness * 100),
+Min = 5,
+Max = 40,
+Rounding = 0,
+Callback = function(value)
+smoothness = value / 100
+end
+})
+
+Tabs.AimAssist:AddToggle("VisibleCheckToggle", {
+Title = "Visible Check",
+Description = "Only target visible players",
+Default = true,
+Callback = function(value)
+visibleCheckEnabled = value
+end
+})
+
+Tabs.AimAssist:AddDropdown("AimPriority", {
+Title = "Aim Priority",
+Description = "Closest to player vs closest to crosshair",
+Values = { "Player", "Crosshair" },
+Default = 1,
+Multi = false,
+Callback = function(value)
+aimPriority = value
+end
+})
+
+Tabs.AimAssist:AddToggle("TeamCheckToggle", {
+Title = "Team Check",
+Description = "Ignore teammates",
+Default = false,
+Callback = function(value)
+teamCheckEnabled = value
+end
+})
+
+--// SAVE + INTERFACE
+SaveManager:SetLibrary(Library)
+InterfaceManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:SetFolder("RJFluentHub")
+SaveManager:SetFolder("RJFluentHub/Universal")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+Window:SelectTab(1)
+SaveManager:LoadAutoloadConfig()
+
+--// MINIMIZE SYSTEM (CIRCLE MODE)
+local circleGui = Instance.new("ScreenGui")
+circleGui.Name = "RJ_MinimizeCircle"
+circleGui.ResetOnSpawn = false
+circleGui.IgnoreGuiInset = true
+circleGui.Parent = PlayerGui
+
+local circleButton = Instance.new("Frame")
+circleButton.Size = UDim2.fromOffset(55, 55)
+circleButton.Position = UDim2.new(0.5, -27, 1, -80)
+circleButton.BackgroundColor3 = Color3.fromRGB(140, 60, 255)
+circleButton.BorderSizePixel = 0
+circleButton.Visible = false
+circleButton.Active = true
+circleButton.Draggable = true
+circleButton.Parent = circleGui
+
+local circleCorner = Instance.new("UICorner")
+circleCorner.CornerRadius = UDim.new(1, 0)
+circleCorner.Parent = circleButton
+
+local circleGlow = Instance.new("UIStroke")
+circleGlow.Color = Color3.fromRGB(200, 120, 255)
+circleGlow.Thickness = 3
+circleGlow.Transparency = 0.3
+circleGlow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+circleGlow.Parent = circleButton
+
+local icon = Instance.new("TextLabel")
+icon.Size = UDim2.fromScale(1, 1)
+icon.BackgroundTransparency = 1
+icon.Text = "RJ"
+icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+icon.Font = Enum.Font.GothamBold
+icon.TextSize = 20
+icon.Parent = circleButton
+
+-- Glow animation
+task.spawn(function()
+while circleButton.Parent do
+TweenService:Create(circleGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+Thickness = 4,
+Transparency = 0.1
+}):Play()
+task.wait(1.2)
+TweenService:Create(circleGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+Thickness = 2,
+Transparency = 0.4
+}):Play()
+task.wait(1.2)
+end
+end)
+
+local minimized = false
+
+local function showCircle()
+circleButton.Visible = true
+circleButton.BackgroundTransparency = 1
+icon.TextTransparency = 1
+
+TweenService:Create(circleButton, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+BackgroundTransparency = 0
+}):Play()
+
+TweenService:Create(icon, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+TextTransparency = 0
+}):Play()
+end
+
+local function hideCircle()
+TweenService:Create(circleButton, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+BackgroundTransparency = 1
+}):Play()
+
+TweenService:Create(icon, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+TextTransparency = 1
+}):Play()
+
+task.delay(0.25, function()
+circleButton.Visible = false
+end)
+end
+
+local function minimizeHub()
+minimized = true
+if Library.Minimize then
+Library:Minimize(true)
+end
+showCircle()
+end
+
+local function restoreHub()
+minimized = false
+if Library.Minimize then
+Library:Minimize(false)
+end
+hideCircle()
+end
+
+-- Click circle to restore
+circleButton.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 then
+if minimized then
+restoreHub()
+end
+end
+end)
+
+-- Bind LeftControl to toggle minimize (matches Window.MinimizeKey)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+if gameProcessed then return end
+if input.KeyCode == Enum.KeyCode.LeftControl then
+if minimized then
+restoreHub()
+else
+minimizeHub()
+end
+end
+end)
+end
+
+--// KEY SYSTEM LOGIC
+unlockButton.MouseButton1Click:Connect(function()
+local inputKey = keyBox.Text
+if inputKey == "" then
+keyStatus.Text = "Please enter a key."
+keyStatus.TextColor3 = Color3.fromRGB(200, 60, 60)
+return
+end
+
+if isValidKey(inputKey) then
+keyStatus.Text = "Key accepted. Loading RJ Aimbot & ESP v2..."
+keyStatus.TextColor3 = Color3.fromRGB(60, 200, 100)
+task.wait(0.5)
+loadHub()
+else
+keyStatus.Text = "Invalid key. Check your key and try again."
+keyStatus.TextColor3 = Color3.fromRGB(200, 60, 60)
+end
+end)
+
+getKeyButton.MouseButton1Click:Connect(function()
+setclipboard(DISCORD_LINK)
+keyStatus.Text = "Discord link copied to clipboard."
+keyStatus.TextColor3 = Color3.fromRGB(80, 160, 255)
+end)
